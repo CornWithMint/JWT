@@ -36,7 +36,7 @@ func (RfrRepo *RefreshRepo) SaveRefresh(ctx context.Context, refresh string, fam
 		return errors.ErrUnsupported
 	}
 
-	_, err = RfrRepo.db.Exec(ctx, `INSERT INTO TABLE refresh_tokens (jti, user_id, family_id, expires_at) VALUES ($1,$2,$3,$4)`,
+	_, err = RfrRepo.db.Exec(ctx, `INSERT INTO refresh_tokens (jti, user_id, family_id, expires_at) VALUES ($1,$2,$3,$4)`,
 		claims.ID, claims.Subject, family, claims.ExpiresAt)
 	if err != nil {
 		return err
@@ -45,7 +45,7 @@ func (RfrRepo *RefreshRepo) SaveRefresh(ctx context.Context, refresh string, fam
 }
 
 func (RfrRepo *RefreshRepo) GetRefreshByJti(ctx context.Context, jti string) (*domain.Refresh_token, error) {
-	row := RfrRepo.db.QueryRow(ctx, `SELECT user_id, family_id, expires_at,revoked FROM users where jti=$1 `, jti)
+	row := RfrRepo.db.QueryRow(ctx, `SELECT user_id, family_id, expires_at,revoked FROM refresh_tokens where jti=$1 `, jti)
 
 	refresh := &domain.Refresh_token{}
 	err := row.Scan(&refresh.User_ID, &refresh.Family_ID, refresh.Expires_at, refresh.Revoked)

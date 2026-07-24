@@ -18,7 +18,7 @@ func NewUserRepo(pool *pgxpool.Pool) *UserRepo {
 }
 
 func (usrRepo *UserRepo) SaveUser(ctx context.Context, user *domain.User) error {
-	_, err := usrRepo.db.Exec(ctx, `INSERT INTO TABLE users (username, email, password_hash) VALUES ($1, $2, $3)`, user.Username, user.Email, user.Password_Hash)
+	_, err := usrRepo.db.Exec(ctx, `INSERT INTO users (username, email, password_hash) VALUES ($1, $2, $3)`, user.Username, user.Email, user.Password_Hash)
 	if err != nil {
 		return err
 	}

@@ -18,6 +18,7 @@ func RegisterHandler(auth *service.UserService) gin.HandlerFunc {
 			ctx.JSON(http.StatusBadRequest, gin.H{
 				"error": err.Error(),
 			})
+			return
 		}
 
 		Password_Hash, err := bcrypt.GenerateFromPassword([]byte(user.Password_Hash), bcrypt.DefaultCost)
@@ -25,6 +26,7 @@ func RegisterHandler(auth *service.UserService) gin.HandlerFunc {
 			ctx.JSON(http.StatusBadRequest, gin.H{
 				"error": err.Error(),
 			})
+			return
 		}
 
 		user.Password_Hash = string(Password_Hash)
@@ -33,6 +35,7 @@ func RegisterHandler(auth *service.UserService) gin.HandlerFunc {
 			ctx.JSON(http.StatusBadRequest, gin.H{
 				"error": err.Error(),
 			})
+			return
 		}
 
 		user.Password_Hash = ""
@@ -52,6 +55,7 @@ func LoginHandler(auth *service.UserService) gin.HandlerFunc {
 			ctx.JSON(http.StatusBadRequest, gin.H{
 				"error": err.Error(),
 			})
+			return
 		}
 
 		access, refresh, err := auth.Login(ctx, user)
@@ -59,6 +63,7 @@ func LoginHandler(auth *service.UserService) gin.HandlerFunc {
 			ctx.JSON(http.StatusBadRequest, gin.H{
 				"error": err.Error(),
 			})
+			return
 		}
 		ctx.SetCookieData(&http.Cookie{
 			Name:     "__Host-refresh_cookie",
@@ -84,6 +89,7 @@ func Refresh(auth *service.UserService) gin.HandlerFunc {
 			ctx.JSON(http.StatusBadRequest, gin.H{
 				"error": err.Error(),
 			})
+			return
 		}
 		new_access, new_refresh, err := auth.Refresh(ctx, refresh)
 		if err != nil {
@@ -94,6 +100,7 @@ func Refresh(auth *service.UserService) gin.HandlerFunc {
 				Name:  "__Host-refresh_cookie",
 				Value: "",
 			})
+			return
 		}
 		ctx.SetCookieData(&http.Cookie{
 			Name:     "__Host-refresh_cookie",

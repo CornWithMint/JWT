@@ -18,6 +18,7 @@ func AuthMiddleware() gin.HandlerFunc {
 			ctx.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
 				"error": "Authorization header required",
 			})
+			return
 		}
 
 		parts := strings.Split(val, " ")
@@ -25,18 +26,19 @@ func AuthMiddleware() gin.HandlerFunc {
 			ctx.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
 				"error": "Authorization header required",
 			})
+			return
 		}
 
 		tokenstring := parts[1]
 
 		token, err := jwt.ParseWithClaims(tokenstring, &domain.AccessClaims{}, func(t *jwt.Token) (any, error) {
-			if _, ok := t.Method.(*jwt.SigningMethodEd25519); !ok {
+			if t.Method != jwt.SigningMethodHS256 {
 				ctx.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
 					"error": "Authorization header required",
 				})
-
+				return nil, errors.ErrUnsupported
 			}
-			return nil, errors.ErrUnsupported
+			return nil, nil
 		})
 		if err != nil {
 			ctx.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
