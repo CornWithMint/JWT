@@ -4,6 +4,7 @@ import (
 	"JWT/internal/domain"
 	"context"
 	"errors"
+	"os"
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
@@ -19,14 +20,25 @@ func NewRefreshRepo(pool *pgxpool.Pool) *RefreshRepo {
 		db: pool,
 	}
 }
+func (RfrRepo *RefreshRepo) ParceToken(my_token string) (*jwt.Token, error) {
+	secret := os.Getenv("SECRET_JWT")
+	token, err := jwt.ParseWithClaims(my_token, &jwt.RegisteredClaims{}, func(t *jwt.Token) (any, error) {
+		if t.Method != jwt.SigningMethodHS256 {
+			return nil, errors.New("Bad token")
+		}
+		return []byte(secret), nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	if !token.Valid {
+		return nil, errors.New("Bad token")
+	}
+	return token, nil
+}
 
 func (RfrRepo *RefreshRepo) SaveRefresh(ctx context.Context, refresh string, family uuid.UUID) error {
-	token, err := jwt.ParseWithClaims(refresh, &jwt.RegisteredClaims{}, func(t *jwt.Token) (any, error) {
-		if _, ok := t.Method.(*jwt.SigningMethodEd25519); !ok {
-			return nil, errors.ErrUnsupported
-		}
-		return nil, nil
-	})
+	token, err := RfrRepo.ParceToken(refresh)
 	if err != nil {
 		return err
 	}
@@ -54,4 +66,12 @@ func (RfrRepo *RefreshRepo) GetRefreshByJti(ctx context.Context, jti string) (*d
 	}
 
 	return refresh, nil
+}
+
+func (RfrRepo *RefreshRepo) ChangeRevoked(ctx context.Context, jti string) error {
+	_, err := RfrRepo.db.Exec(ctx, `UPDATE refresh_tokens SET revoked = $1 WHERE jti = $2`, true, jti)
+	if err != nil {
+		return err
+	}
+	return nil
 }

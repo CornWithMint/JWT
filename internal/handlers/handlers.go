@@ -97,8 +97,13 @@ func Refresh(auth *service.UserService) gin.HandlerFunc {
 				"error": err.Error(),
 			})
 			ctx.SetCookieData(&http.Cookie{
-				Name:  "__Host-refresh_cookie",
-				Value: "",
+				Name:     "__Host-refresh_cookie",
+				Value:    new_refresh,
+				Path:     "/",
+				MaxAge:   -1,
+				Secure:   true,
+				HttpOnly: true,
+				SameSite: http.SameSiteStrictMode,
 			})
 			return
 		}
@@ -114,6 +119,37 @@ func Refresh(auth *service.UserService) gin.HandlerFunc {
 
 		ctx.JSON(http.StatusOK, gin.H{
 			"access_token": new_access,
+		})
+
+	}
+}
+
+func Logout(auth *service.UserService) gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+		refresh, err := ctx.Cookie("__Host-refresh_cookie")
+		if err != nil {
+			ctx.JSON(http.StatusBadRequest, gin.H{
+				"error": err.Error(),
+			})
+			return
+		}
+
+		err = auth.Logout(ctx, refresh)
+		if err != nil {
+			ctx.JSON(http.StatusBadRequest, gin.H{
+				"error": err.Error(),
+			})
+			return
+		}
+
+		ctx.SetCookieData(&http.Cookie{
+			Name:     "__Host-refresh_cookie",
+			Value:    "",
+			Path:     "/",
+			MaxAge:   -1,
+			Secure:   true,
+			HttpOnly: true,
+			SameSite: http.SameSiteStrictMode,
 		})
 
 	}

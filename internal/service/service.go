@@ -21,6 +21,8 @@ type UserRepo interface {
 type RefreshRepo interface {
 	GetRefreshByJti(ctx context.Context, jti string) (*domain.Refresh_token, error)
 	SaveRefresh(ctx context.Context, refresh string, family uuid.UUID) error
+	ParceToken(my_token string) (*jwt.Token, error)
+	ChangeRevoked(ctx context.Context, jti string) error
 }
 
 type UserService struct {
@@ -57,7 +59,7 @@ func (as *UserService) GenerateTokens(user *domain.User) (string, string, error)
 	refresh_token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.RegisteredClaims{
 		ID:        uuid.NewString(),
 		Subject:   user.Id.String(),
-		ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour * 188)),
+		ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour * 168)),
 		IssuedAt:  jwt.NewNumericDate(time.Now()),
 	})
 
@@ -96,18 +98,10 @@ func (as *UserService) Login(ctx context.Context, user *domain.User) (string, st
 }
 
 func (as *UserService) Refresh(ctx context.Context, refresh string) (string, string, error) {
-	token, err := jwt.ParseWithClaims(refresh, &jwt.RegisteredClaims{}, func(t *jwt.Token) (any, error) {
-		if t.Method != jwt.SigningMethodHS256 {
-			return nil, errors.ErrUnsupported
-		}
-		return nil, nil
-	})
-	if err != nil {
-		return "", "", err
-	}
+	token, err := as.refreshrepo.ParceToken(refresh)
 
 	claims, ok := token.Claims.(jwt.RegisteredClaims)
-	if !ok || !token.Valid {
+	if !ok {
 		return "", "", errors.ErrUnsupported
 	}
 	user_id := claims.Subject
@@ -138,4 +132,24 @@ func (as *UserService) Refresh(ctx context.Context, refresh string) (string, str
 
 	return new_access, new_refresh, nil
 
+}
+
+func (as *UserService) Logout(ctx context.Context, refresh string) error {
+	token, err := as.refreshrepo.ParceToken(refresh)
+	if err != nil {
+		return err
+	}
+
+	claims, ok := token.Claims.(jwt.RegisteredClaims)
+	if !ok {
+		return errors.ErrUnsupported
+	}
+	jti := claims.ID
+
+	err = as.refreshrepo.ChangeRevoked(ctx, jti)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
